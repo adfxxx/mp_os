@@ -4,10 +4,21 @@
 #include <logger.h>
 #include "server_logger_builder.h"
 
-class server_logger final:
-    public logger
+class server_logger final:public logger
 {
+    friend class server_logger_builder;
+    server_logger(std::map<std::string, std::pair<key_t, std::set<logger::severity>>> streams);
+    std::map<std::string, std::pair<int, std::set<logger::severity>>> _streams;
+    static std::map<std::string, std::pair<int, int>> _all_streams;
 
+    struct information{
+        long type;
+        std::pair<int, logger::severity> info;
+    };
+    struct message{
+        long type;
+        char text[1024];
+    };
 public:
 
     server_logger(

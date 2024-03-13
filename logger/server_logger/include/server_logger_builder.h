@@ -2,11 +2,23 @@
 #define MATH_PRACTICE_AND_OPERATING_SYSTEMS_SERVER_LOGGER_BUILDER_H
 
 #include <logger_builder.h>
+#include <map>
+#include <set>
+#include <server_logger.h>
+#include <nlohmann/json.hpp>
+#include <fstream>
+
+#ifdef _WIN32
+    #define CONSOLE "CON"
+#elif __linux__
+    #define CONSOLE "/dev/tty"
+#else
+#endif
 
 class server_logger_builder final:
     public logger_builder
 {
-
+    std::map<std::string, std::pair<key_t, std::set<logger::severity>>> _streams;
 public:
 
     server_logger_builder();
