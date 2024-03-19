@@ -7,18 +7,21 @@
 class server_logger final:public logger
 {
     friend class server_logger_builder;
-    server_logger(std::map<std::string, std::pair<key_t, std::set<logger::severity>>> streams);
-    std::map<std::string, std::pair<int, std::set<logger::severity>>> _streams;
-    static std::map<std::string, std::pair<int, int>> _all_streams;
+    
+    server_logger(std::map<std::string, std::set<logger::severity>> streams);
 
-    struct information{
-        long type;
-        std::pair<int, logger::severity> info;
-    };
-    struct message{
-        long type;
-        char text[1024];
-    };
+    size_t mutable _request;
+    pid_t _id;
+    
+#ifdef _WIN32
+    std::map<std::string, std::pair<HANDLE, std::set<logger::severity>>> _streams;
+    static std::map<std::string, std::pair<HANDLE, int>> _all_streams;
+#elif __linux__
+    std::map<std::string, std::pair<mqd_t, std::set<logger::severity>>> _streams;
+    static std::map<std::string, std::pair<mqd_t, int>> _all_streams;
+#endif
+
+
 public:
 
     server_logger(

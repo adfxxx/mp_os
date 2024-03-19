@@ -2,6 +2,10 @@
 
 #include "../include/client_logger.h"
 
+client_logger::client_logger(std::map<std::thread, std::pair<key_t, std::set<logger::severity>>> streams){
+
+}
+
 client_logger::client_logger(
     client_logger const &other)
 {

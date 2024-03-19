@@ -7,7 +7,12 @@
 class client_logger final:
     public logger
 {
+    friend class client_logger_builder;
 
+    client_logger(std::map<std::thread, std::pair<key_t, std::set<logger::severity>>> streams);
+    std::map<std::string, std::pair<int, std::set<logger::severity>>> _streams;
+    static std::map<std::string, std::pair<int, int>> _all_streams;
+    
 public:
 
     client_logger(

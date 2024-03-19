@@ -1,22 +1,26 @@
 #include <not_implemented.h>
-#include <sys/msg.h>
-#include <sys/ipc.h>
 
 #include "../include/server_logger.h"
 
-server_logger::server_logger(std::map<std::string, std::pair<key_t, std::set<logger::severity>>> streams){
+server_logger::server_logger(std::map<std::string, std::set<logger::severity>> streams){
     std::runtime_error open_error ("Queue is not open");
-    for(auto &[file, pair] : streams){
+    for(auto &[file, severities] : streams){
         if(_all_streams.find(file) == _all_streams.end()){
-            int id = msgget(pair.first, 066 | IPC_CREAT);
+#ifdef _WIN32
+            HANDLE id = CreateFile(stream_file_path.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+            if(id == INVALID_HANDLE_VALUE){
+                throw open_error;
+            }
+#elif __linux__
+            mqd_t id = mq_open(file.c_str(), O_WRONLY, 0644, nullptr);
             if(id < 0){
                 throw open_error;
             }
+#endif
             _all_streams[file].first = id;
         }
-        int id = _all_streams[file].first;
-        _streams[file].first = id;
-        _streams[file].second = pair.second;
+        _streams[file].first = _all_streams[file].first;
+        _streams[file].second = severities;
         _all_streams[file].second++;
     }
 }
@@ -31,38 +35,84 @@ server_logger &server_logger::operator=(server_logger &&other) noexcept = defaul
 
 server_logger::~server_logger() noexcept
 {
+    std::runtime_error close_error("Queue is not closed");
     for(auto &[file, pair] : _streams){
         _all_streams[file].second--;
         if(_all_streams[file].second == 0){
-            msgctl(pair.first, IPC_RMID, 0);
+#ifdef _WIN32
+            if(CloseHandle(_all_streams[file].first) == 0){
+                throw close_error;
+            }
+#elif __linux__
+            if(mq_close( _all_streams[file].first) < 0){
+                throw close_error;
+            }
+#endif
         }
     }
 }
 
 logger const *server_logger::log(const std::string &text,logger::severity severity) const noexcept
 {
-    int size = sizeof(text)/1024 + 1;
-    information msg;
-    msg.type = 1;
-    msg.info.first = size;
-    msg.info.second = severity;
-    message msg_2[size];
-    for(int i = 0; i < size; i++){
-        msg_2[i].type = 1;
-        if(i != size - 1){
-            strcpy(msg_2[i].text, text.substr(i*1024, 1024).c_str());
-        }
-        else{
-            strcpy(msg_2[i].text, text.substr(i*1024).c_str());
-        }
-    }
+    std::runtime_error send_error ("Message is not sent");
+
+    size_t meta = sizeof(size_t) + sizeof(size_t) + sizeof(pid_t) + sizeof(const char*) + sizeof(bool);
+    size_t message = 100 - meta;
+    size_t count = text.size()/message + 1;
+
+    char info[meta];
+    char *ptr = info;
+
+    *reinterpret_cast<bool*>(ptr) = false;
+    ptr += sizeof(bool);
+    *reinterpret_cast<bool*>(ptr) = count;
+    ptr += sizeof(size_t);
+    *reinterpret_cast<bool*>(ptr) = _request;
+    ptr += sizeof(size_t);
+    *reinterpret_cast<bool*>(ptr) = _id;
+    ptr += sizeof(pid_t);
+
+    char const *severity_str = severity_to_string(severity).c_str();
+    strcpy(ptr, severity_str);
+
+    char msg[100];
+
     for(auto &[file, pair] : _streams){
         if(pair.second.find(severity) != pair.second.end()){
-            msgsnd(pair.first, &msg, sizeof(msg), 0);
-            for(int i = 0; i < size; i++){
-                msgsnd(pair.first, &msg_2[i], sizeof(msg_2[i]), 0);
+#ifdef _WIN32
+            if(WriteFile(pair.first, info, 100) == 0){
+                throw send_error;
+            }
+#elif __linux__
+            if(mq_send(pair.first, info, 100, 0) < 0){
+                throw send_error;
+            }
+#endif
+            ptr = msg;
+            *reinterpret_cast<bool*>(ptr) = true;
+            ptr += sizeof(bool);
+            *reinterpret_cast<bool*>(ptr) = _request;
+            ptr += sizeof(size_t);
+            *reinterpret_cast<bool*>(ptr) = _id;
+            ptr += sizeof(pid_t);
+            for(size_t i = 0; i < count; i++){
+                size_t position = i*message;
+                size_t ost = text.size() - position;
+                size_t substr = (ost < message) ? ost : message;
+                memcpy(ptr, text.substr(position, substr).c_str(), substr);
+                *(ptr + substr) = 0;
+#ifdef _WIN32
+                if(WriteFile(pair.first, msg, 100) == 0){
+                    throw send_error;
+                }
+#elif __linux__
+                if(mq_send(pair.first, msg, 100, 0) < 0){
+                    throw send_error;
+                }
+#endif
             }
         }
     }
+    _request++;
     return this;
 }
