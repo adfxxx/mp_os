@@ -4,13 +4,27 @@
 #include <logger_builder.h>
 #include <map>
 #include <set>
-#include <thread>
+#include <nlohmann/json.hpp>
+#include <fstream>
+
+#include "client_logger.h"
+
+#ifdef _WIN32
+    #include <windows.h>
+    #define CONSOLE "CON"
+#elif __linux__
+    #include <mqueue.h>
+    #define CONSOLE "/dev/tty"
+#else
+#endif
 
 class client_logger_builder final:
     public logger_builder
 {
-    std::map<std::thread, std::pair<key_t, std::set<logger::severity>>> _streams;
+    std::map<std::string, std::set<logger::severity>> _logs;
+    std::string _log_format;
 public:
+    logger_builder * client_logger_builder::save_format(std::string &format);
 
     client_logger_builder();
 

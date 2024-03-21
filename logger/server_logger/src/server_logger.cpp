@@ -7,12 +7,12 @@ server_logger::server_logger(std::map<std::string, std::set<logger::severity>> s
     for(auto &[file, severities] : streams){
         if(_all_streams.find(file) == _all_streams.end()){
 #ifdef _WIN32
-            HANDLE id = CreateFile(stream_file_path.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+            HANDLE id = CreateFile(stream_file_path.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr); //путь к файлу, открытие для записи, файл недоступен другим процессам, стандартная защита, открытие только если существует, стандартные атрибуты
             if(id == INVALID_HANDLE_VALUE){
                 throw open_error;
             }
 #elif __linux__
-            mqd_t id = mq_open(file.c_str(), O_WRONLY, 0644, nullptr);
+            mqd_t id = mq_open(file.c_str(), O_WRONLY, 0644, nullptr); //имя очереди, только для записи, стандартные права доступа, стандартные атрибуты
             if(id < 0){
                 throw open_error;
             }
@@ -56,7 +56,7 @@ logger const *server_logger::log(const std::string &text,logger::severity severi
 {
     std::runtime_error send_error ("Message is not sent");
 
-    size_t meta = sizeof(size_t) + sizeof(size_t) + sizeof(pid_t) + sizeof(const char*) + sizeof(bool);
+    size_t meta = sizeof(bool) + sizeof(pid_t) + sizeof(size_t) + sizeof(size_t) + sizeof(pid_t) + sizeof(const char*);
     size_t message = 100 - meta;
     size_t count = text.size()/message + 1;
 
@@ -65,11 +65,11 @@ logger const *server_logger::log(const std::string &text,logger::severity severi
 
     *reinterpret_cast<bool*>(ptr) = false;
     ptr += sizeof(bool);
-    *reinterpret_cast<bool*>(ptr) = count;
+    *reinterpret_cast<size_t*>(ptr) = count;
     ptr += sizeof(size_t);
-    *reinterpret_cast<bool*>(ptr) = _request;
+    *reinterpret_cast<size_t*>(ptr) = _request;
     ptr += sizeof(size_t);
-    *reinterpret_cast<bool*>(ptr) = _id;
+    *reinterpret_cast<pid_t*>(ptr) = _id;
     ptr += sizeof(pid_t);
 
     char const *severity_str = severity_to_string(severity).c_str();
@@ -78,7 +78,7 @@ logger const *server_logger::log(const std::string &text,logger::severity severi
     char msg[100];
 
     for(auto &[file, pair] : _streams){
-        if(pair.second.find(severity) != pair.second.end()){
+        if(pair.second.find(severity) != pair.second.end()){ //send meta
 #ifdef _WIN32
             if(WriteFile(pair.first, info, 100) == 0){
                 throw send_error;
@@ -91,9 +91,9 @@ logger const *server_logger::log(const std::string &text,logger::severity severi
             ptr = msg;
             *reinterpret_cast<bool*>(ptr) = true;
             ptr += sizeof(bool);
-            *reinterpret_cast<bool*>(ptr) = _request;
+            *reinterpret_cast<size_t*>(ptr) = _request;
             ptr += sizeof(size_t);
-            *reinterpret_cast<bool*>(ptr) = _id;
+            *reinterpret_cast<pid_t*>(ptr) = _id;
             ptr += sizeof(pid_t);
             for(size_t i = 0; i < count; i++){
                 size_t position = i*message;

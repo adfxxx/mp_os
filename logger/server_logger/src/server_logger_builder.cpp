@@ -23,6 +23,7 @@ logger_builder *server_logger_builder::add_file_stream(std::string const &stream
 #elif _WIN32    
         file = "//./pipe/";
 #endif
+        file += stream_file_path;
     }
     else{
 #ifdef __linux__
