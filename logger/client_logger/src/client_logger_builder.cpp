@@ -77,7 +77,8 @@ logger *client_logger_builder::build() const
     return new client_logger(_logs, _log_format);
 }
 
-logger_builder * client_logger_builder::save_format(std::string &format)
+logger_builder *client_logger_builder::save_format(std::string &format)
 {
     _log_format = format;
+    return this;
 }

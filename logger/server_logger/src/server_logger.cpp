@@ -2,6 +2,10 @@
 
 #include "../include/server_logger.h"
 
+#define MSG_SIZE 100
+
+std::map<std::string, std::pair<mqd_t, int>> server_logger::_all_streams = std::map<std::string, std::pair<mqd_t, int>>();
+
 server_logger::server_logger(std::map<std::string, std::set<logger::severity>> streams){
     std::runtime_error open_error ("Queue is not open");
     for(auto &[file, severities] : streams){
@@ -56,8 +60,8 @@ logger const *server_logger::log(const std::string &text,logger::severity severi
 {
     std::runtime_error send_error ("Message is not sent");
 
-    size_t meta = sizeof(bool) + sizeof(pid_t) + sizeof(size_t) + sizeof(size_t) + sizeof(pid_t) + sizeof(const char*);
-    size_t message = 100 - meta;
+    size_t meta = sizeof(bool) + sizeof(size_t) + sizeof(size_t) + sizeof(pid_t) + sizeof(const char*);
+    size_t message = MSG_SIZE - meta;
     size_t count = text.size()/message + 1;
 
     char info[meta];
@@ -75,16 +79,16 @@ logger const *server_logger::log(const std::string &text,logger::severity severi
     char const *severity_str = severity_to_string(severity).c_str();
     strcpy(ptr, severity_str);
 
-    char msg[100];
+    char msg[MSG_SIZE];
 
     for(auto &[file, pair] : _streams){
         if(pair.second.find(severity) != pair.second.end()){ //send meta
 #ifdef _WIN32
-            if(WriteFile(pair.first, info, 100) == 0){
+            if(WriteFile(pair.first, info, MSG_SIZE) == 0){
                 throw send_error;
             }
 #elif __linux__
-            if(mq_send(pair.first, info, 100, 0) < 0){
+            if(mq_send(pair.first, info, MSG_SIZE, 0) < 0){
                 throw send_error;
             }
 #endif
@@ -102,11 +106,11 @@ logger const *server_logger::log(const std::string &text,logger::severity severi
                 memcpy(ptr, text.substr(position, substr).c_str(), substr);
                 *(ptr + substr) = 0;
 #ifdef _WIN32
-                if(WriteFile(pair.first, msg, 100) == 0){
+                if(WriteFile(pair.first, msg, MSG_SIZE) == 0){
                     throw send_error;
                 }
 #elif __linux__
-                if(mq_send(pair.first, msg, 100, 0) < 0){
+                if(mq_send(pair.first, msg, MSG_SIZE, 0) < 0){
                     throw send_error;
                 }
 #endif

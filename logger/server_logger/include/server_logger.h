@@ -4,6 +4,16 @@
 #include <logger.h>
 #include "server_logger_builder.h"
 
+#ifdef _WIN32
+    #include <windows.h>
+    #define CONSOLE "CON"
+#elif __linux__
+    #include <mqueue.h>
+    #define CONSOLE "/dev/tty"
+#else
+#endif
+
+
 class server_logger final:public logger
 {
     friend class server_logger_builder;

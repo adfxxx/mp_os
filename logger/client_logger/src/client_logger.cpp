@@ -3,6 +3,8 @@
 
 #include "../include/client_logger.h"
 
+std::map<std::string, std::pair<std::ofstream, int>> client_logger::_all_streams = std::map<std::string, std::pair<std::ofstream, int>>();
+
 client_logger::client_logger(std::map<std::string, std::set<logger::severity>> streams, std::string log_format){
     std::runtime_error open_error ("Stream is not open");
     for(auto &[file, severities] : streams){
@@ -36,33 +38,27 @@ client_logger::~client_logger() noexcept
     }
 }
 
+void get_string(const std::string &msg, std::string &log_format, const std::string &flag){
+    size_t pos = log_format.find(flag);
+    if(pos != std::string::npos){
+        log_format.replace(pos, flag.size(), msg);
+    }
+}
+
 void get_format(std::string &log_format, const std::string &text, const std::string &severity){
     std::time_t cur_time = std::time(nullptr);
     std::tm* now = std::localtime(&cur_time);
     char time_str[20];
     std::strftime(time_str, sizeof(time_str), "%T", now);
 
-    size_t pos = log_format.find("%m");
-    if(pos != std::string::npos){
-        log_format.replace(pos, 2, text);
-    }
+    get_string(text, log_format, "%m");
 
-    pos = log_format.find("%s");
-    if(pos != std::string::npos){
-        log_format.replace(pos, 2, severity);
-    }
+    get_string(time_str, log_format, "%t");
 
-    pos = log_format.find("%t");
-    if(pos != std::string::npos){
-        log_format.replace(pos, 2, time_str);
-    }
+    get_string(severity, log_format, "%s");
 
     std::strftime(time_str, sizeof(time_str), "%F", now);
-    pos = log_format.find("%d");
-    if(pos != std::string::npos){
-        log_format.replace(pos, 2, time_str);
-    }
-
+    get_string(time_str, log_format, "%d");
 }
 
 logger const *client_logger::log(const std::string &text, logger::severity severity) const noexcept
