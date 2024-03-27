@@ -36,7 +36,7 @@ protected:
     public:
         
         explicit node(
-            tkey const &key,
+            tkey const &key, 
             tvalue const &value);
         
         explicit node(
@@ -744,7 +744,7 @@ binary_search_tree<tkey, tvalue>::node::node(
     tkey const &key,
     tvalue const &value)
 {
-    throw not_implemented("template<typename tkey, typename tvalue> binary_search_tree<tkey, tvalue>::node::node(tkey const &, tvalue const &)", "your code should be here...");
+    this->left_subtree = this->right_subtree = nullptr;
 }
 
 template<
@@ -754,7 +754,9 @@ binary_search_tree<tkey, tvalue>::node::node(
     tkey const &key,
     tvalue &&value)
 {
-    throw not_implemented("template<typename tkey, typename tvalue> binary_search_tree<tkey, tvalue>::node::node(tkey const &, tvalue &&)", "your code should be here...");
+    this->left_subtree = this->right_subtree = nullptr;
+    this->value = std::move(value);
+    this->key = key;
 }
 
 // endregion binary_search_tree<tkey, tvalue>::node methods implementation

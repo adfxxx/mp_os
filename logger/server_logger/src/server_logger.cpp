@@ -4,7 +4,11 @@
 
 #define MSG_SIZE 100
 
+#ifdef __linux__
 std::map<std::string, std::pair<mqd_t, int>> server_logger::_all_streams = std::map<std::string, std::pair<mqd_t, int>>();
+#elif _WIN32
+std::map<std::string, std::pair<HANDLE, int>> server_logger::_all_streams = std::map<std::string, std::pair<HANDLE, int>>();
+#endif
 
 server_logger::server_logger(std::map<std::string, std::set<logger::severity>> streams){
     std::runtime_error open_error ("Queue is not open");
@@ -29,13 +33,47 @@ server_logger::server_logger(std::map<std::string, std::set<logger::severity>> s
     }
 }
 
-server_logger::server_logger(server_logger const &other) = default;
+server_logger::server_logger(server_logger const &other)
+    : _streams(other._streams), _id(other._id), _request(other._request)
+{
+    for(auto &[file, severity] : _streams){
+        _all_streams[file].second++;
+    }
+}
+    
 
-server_logger &server_logger::operator=(server_logger const &other) = default;
+server_logger &server_logger::operator=(server_logger const &other){
+    if(this == &other){
+        return *this;
+    }
+    
+    _streams = other._streams;
+    _id = other._id;
+    _request = other._request;
 
-server_logger::server_logger(server_logger &&other) noexcept = default;
+    this->server_logger::~server_logger();
 
-server_logger &server_logger::operator=(server_logger &&other) noexcept = default;
+    for(auto &[file, pair] : _all_streams){
+        _all_streams[file].second++;
+    }
+
+    return *this;
+}
+
+server_logger::server_logger(server_logger &&other) noexcept
+    : _streams(std::move(other._streams)), _id(std::move(other._id)),
+      _request(std::move(other._request)) {}
+
+server_logger &server_logger::operator=(server_logger &&other) noexcept
+{
+    if(this != &other){
+        this->server_logger::~server_logger();
+        _streams = std::move(other._streams);
+        _id = std::move(other._id);
+        _request = std::move(other._request);
+    }
+    return *this;
+}
 
 server_logger::~server_logger() noexcept
 {
