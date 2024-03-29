@@ -33,3 +33,11 @@
 
 # cmake-build-debug directory
 cmake-build-debug/
+
+.vscode/
+*.ignore
+Makefile
+cmake_install.cmake
+CMakeFiles/
+_deps/
+CMakeCache.txt

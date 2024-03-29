@@ -10,9 +10,10 @@ std::map<std::string, std::pair<mqd_t, int>> server_logger::_all_streams = std::
 std::map<std::string, std::pair<HANDLE, int>> server_logger::_all_streams = std::map<std::string, std::pair<HANDLE, int>>();
 #endif
 
-server_logger::server_logger(std::map<std::string, std::set<logger::severity>> streams){
+server_logger::server_logger(std::map<std::string, std::set<logger::severity>> logs){
     std::runtime_error open_error ("Queue is not open");
-    for(auto &[file, severities] : streams){
+
+    for(auto &[file, severities] : logs){
         if(_all_streams.find(file) == _all_streams.end()){
 #ifdef _WIN32
             HANDLE id = CreateFile(stream_file_path.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr); //путь к файлу, открытие для записи, файл недоступен другим процессам, стандартная защита, открытие только если существует, стандартные атрибуты
@@ -34,43 +35,33 @@ server_logger::server_logger(std::map<std::string, std::set<logger::severity>> s
 }
 
 server_logger::server_logger(server_logger const &other)
-    : _streams(other._streams), _id(other._id), _request(other._request)
+    : _streams(other._streams)
 {
-    for(auto &[file, severity] : _streams){
-        _all_streams[file].second++;
+    for(auto &[file, pair] : _all_streams){
+        pair.second++;
     }
 }
     
 
 server_logger &server_logger::operator=(server_logger const &other){
-    if(this == &other){
-        return *this;
+    if(this != &other){
+        this->server_logger::~server_logger();
+        _streams = other._streams;
+        for(auto &[file, pair] : _streams){
+            _all_streams[file].second++;
+        }
     }
-    
-    _streams = other._streams;
-    _id = other._id;
-    _request = other._request;
-
-    this->server_logger::~server_logger();
-
-    for(auto &[file, pair] : _all_streams){
-        _all_streams[file].second++;
-    }
-
     return *this;
 }
 
 server_logger::server_logger(server_logger &&other) noexcept
-    : _streams(std::move(other._streams)), _id(std::move(other._id)),
-      _request(std::move(other._request)) {}
+    : _streams(std::move(other._streams)) {}
 
 server_logger &server_logger::operator=(server_logger &&other) noexcept
 {
     if(this != &other){
         this->server_logger::~server_logger();
         _streams = std::move(other._streams);
-        _id = std::move(other._id);
-        _request = std::move(other._request);
     }
     return *this;
 }
@@ -137,6 +128,7 @@ logger const *server_logger::log(const std::string &text,logger::severity severi
             ptr += sizeof(size_t);
             *reinterpret_cast<pid_t*>(ptr) = _id;
             ptr += sizeof(pid_t);
+            
             for(size_t i = 0; i < count; i++){
                 size_t position = i*message;
                 size_t ost = text.size() - position;

@@ -20,13 +20,39 @@ client_logger::client_logger(std::map<std::string, std::set<logger::severity>> s
     _log_format = log_format;
 }
 
-client_logger::client_logger(client_logger const &other) = default;
+client_logger::client_logger(client_logger const &other)
+    : _streams(other._streams), _log_format(other._log_format)
+{
+    for(auto &[file, pair] : _all_streams){
+        pair.second++;
+    }
+}
 
-client_logger &client_logger::operator=(client_logger const &other) = default;
+client_logger &client_logger::operator=(client_logger const &other){
+    if(this != &other){
+        this->client_logger::~client_logger();
+        _streams = other._streams;
+        _log_format = other._log_format;
+        for(auto &[file, pair] : _streams){
+            _all_streams[file].second++;
+        }
+    }
+    return *this;
+}
 
-client_logger::client_logger(client_logger &&other) noexcept = default;
+client_logger::client_logger(client_logger &&other) noexcept 
+    : _streams(std::move(other._streams)), _log_format(std::move(other._log_format)) {}
 
-client_logger &client_logger::operator=(client_logger &&other) noexcept = default;
+client_logger &client_logger::operator=(client_logger &&other) noexcept 
+{
+    if(this != &other){
+        this->client_logger::~client_logger();
+        _streams = std::move(other._streams);
+        _log_format = std::move(other._log_format);
+    }
+    return *this;
+}
+
 
 client_logger::~client_logger() noexcept
 {

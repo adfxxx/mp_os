@@ -13,6 +13,7 @@ class client_logger final:
     std::map<std::string, std::set<logger::severity>> _streams;
     static std::map<std::string, std::pair<std::ofstream, int>> _all_streams;
     std::string _log_format;
+    
 public:
 
     client_logger(

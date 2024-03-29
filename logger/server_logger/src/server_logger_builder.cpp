@@ -46,12 +46,14 @@ logger_builder *server_logger_builder::add_console_stream(logger::severity sever
 logger_builder* server_logger_builder::transform_with_configuration(std::string const &configuration_file_path, std::string const &configuration_path)
 {
     std::runtime_error open_error ("Queue is not open");
+
     nlohmann::json info;
     std::ifstream file(configuration_file_path);
     if(!file.is_open()){
         throw std::runtime_error ("File is not open");
     }
     file>>info;
+    
     std::string file_name;
     std::string file_severity;
     logger::severity log_severity;

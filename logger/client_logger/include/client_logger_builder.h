@@ -19,8 +19,10 @@
 class client_logger_builder final:
     public logger_builder
 {
+    
     std::map<std::string, std::set<logger::severity>> _logs;
     std::string _log_format;
+
 public:
     logger_builder *save_format(std::string &format);
 

@@ -18,7 +18,7 @@ class server_logger final:public logger
 {
     friend class server_logger_builder;
     
-    server_logger(std::map<std::string, std::set<logger::severity>> streams);
+    server_logger(std::map<std::string, std::set<logger::severity>> logs);
 
     size_t mutable _request;
     pid_t _id;
