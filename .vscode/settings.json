@@ -1,5 +1,5 @@
 {
-    "C_Cpp.default.compilerPath": "/usr/bin/gcc-11",
+    "C_Cpp.default.compilerPath": "/usr/bin/g++",
     "files.associations": {
         "array": "cpp",
         "atomic": "cpp",
@@ -60,7 +60,14 @@
         "list": "cpp",
         "semaphore": "cpp",
         "stop_token": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "ranges": "cpp",
+        "any": "cpp",
+        "condition_variable": "cpp",
+        "unordered_set": "cpp",
+        "optional": "cpp",
+        "mutex": "cpp",
+        "variant": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }
